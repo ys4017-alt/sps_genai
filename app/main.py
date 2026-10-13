@@ -1,12 +1,40 @@
 from typing import Union
 
-from fastapi import FastAPI
+from fastapi import FastAPI, File, UploadFile
 from pydantic import BaseModel
 
 from app.bigram_model import BigramModel
 from app.embedding_model import EmbeddingModel
+from PIL import Image
+from torchvision import transforms
+
+from helper_lib.model import get_model
+from helper_lib.utils import load_model
+import io
+import torch
+
+CLASSES = [
+    "airplane", "automobile", "bird", "cat", "deer", "dog", "frog", "horse", "ship", "truck",
+]
+
+cnn_model = load_model(get_model("AssignmentCNN"), "models/cnn_cifar10.pth")
+cnn_model.eval()
+preprocess = transforms.Compose([
+    transforms.Resize((64,64)), transforms.ToTensor()
+])
+
 
 app = FastAPI()
+
+@app.post("/classify")
+async def classify_image(file: UploadFile = File(...)):
+    image = Image.open(io.BytesIO(await file.read())).convert("RGB")
+    x = preprocess(image).unsqueeze(0)
+    with torch.no_grad():
+        probs = torch.softmax(cnn_model(x), dim=1)[0]
+    idx = int(probs.argmax())
+    return {"class": CLASSES[idx], "confidence": float(probs[idx])}
+
 
 # Sample corpus for the bigram model
 corpus = [
