@@ -1,4 +1,6 @@
 version: '3.8'
 services:
-  hello-world:
-    image: hello-world
+  api:
+    build: .
+    ports:
+      - "8000:80"

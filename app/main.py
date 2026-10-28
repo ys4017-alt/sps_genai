@@ -1,6 +1,7 @@
 from typing import Union
 
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, Query, UploadFile
+from fastapi.responses import Response
 from pydantic import BaseModel
 
 from app.bigram_model import BigramModel
@@ -8,6 +9,7 @@ from app.embedding_model import EmbeddingModel
 from PIL import Image
 from torchvision import transforms
 
+from helper_lib.generator import generate_gan_images
 from helper_lib.model import get_model
 from helper_lib.utils import load_model
 import io
@@ -23,6 +25,8 @@ preprocess = transforms.Compose([
     transforms.Resize((64,64)), transforms.ToTensor()
 ])
 
+gan_generator = load_model(get_model("Generator"), "models/gan_mnist_generator.pth")
+gan_generator.eval()
 
 app = FastAPI()
 
@@ -34,6 +38,13 @@ async def classify_image(file: UploadFile = File(...)):
         probs = torch.softmax(cnn_model(x), dim=1)[0]
     idx = int(probs.argmax())
     return {"class": CLASSES[idx], "confidence": float(probs[idx])}
+
+@app.get("/generate_digits")
+def generate_digits(num_samples: int = Query(16, ge=1, le=64), seed: Union[int, None] = None):
+    image = generate_gan_images(gan_generator, num_samples=num_samples, seed=seed)
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    return Response(content=buffer.getvalue(), media_type="image/png")
 
 
 # Sample corpus for the bigram model
