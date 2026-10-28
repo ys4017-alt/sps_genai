@@ -101,4 +101,4 @@ if __name__ == "__main__":
     assert prob.shape == (8,1), prob.shape
     assert ((prob>=0) & (prob<=1)).all()
     print("Generator:", tuple(z.shape), "->", tuple(fake.shape))
-    print("Discriminator:", tuple(fake.shape), "->", tuple(z.shape))
+    print("Discriminator:", tuple(fake.shape), "->", tuple(prob.shape))
