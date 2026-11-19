@@ -9,6 +9,7 @@ from app.embedding_model import EmbeddingModel
 from PIL import Image
 from torchvision import transforms
 
+from helper_lib.generator import generate_diffusion_images, generate_ebm_images, generate_gan_images
 from helper_lib.generator import generate_gan_images
 from helper_lib.model import get_model
 from helper_lib.utils import load_model
@@ -28,6 +29,12 @@ preprocess = transforms.Compose([
 gan_generator = load_model(get_model("Generator"), "models/gan_mnist_generator.pth")
 gan_generator.eval()
 
+ebm_model = load_model(get_model("EnergyModel"), "models/ebm_cifar10.pth")
+ebm_model.eval()
+
+diffusion_model = load_model(get_model("Diffusion"), "models/diffusion_cifar10.pth")
+diffusion_model.eval()
+
 app = FastAPI()
 
 @app.post("/classify")
@@ -46,6 +53,30 @@ def generate_digits(num_samples: int = Query(16, ge=1, le=64), seed: Union[int, 
     image.save(buffer, format="PNG")
     return Response(content=buffer.getvalue(), media_type="image/png")
 
+# no torch.no_grad(): Langevin sampling needs gradients of the energy w.r.t. the input image
+@app.get("/generate_ebm")
+def generate_ebm(
+    num_samples: int = Query(16, ge=1, le=64),
+    steps: int = Query(256, ge=1, le=1000),
+    seed: Union[int, None] = None,
+):
+    image = generate_ebm_images(ebm_model, num_samples=num_samples, steps=steps, seed=seed)
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    return Response(content=buffer.getvalue(), media_type="image/png")
+
+@app.get("/generate_diffusion")
+def generate_diffusion(
+    num_samples: int = Query(16, ge=1, le=64),
+    diffusion_steps: int = Query(20, ge=1, le=1000),
+    seed: Union[int, None] = None,
+):
+    image = generate_diffusion_images(
+        diffusion_model, num_samples=num_samples, diffusion_steps=diffusion_steps, seed=seed
+    )
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    return Response(content=buffer.getvalue(), media_type="image/png")
 
 # Sample corpus for the bigram model
 corpus = [
