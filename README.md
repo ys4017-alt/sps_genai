@@ -19,6 +19,8 @@ Run them as modules from the repo root, so the `helper_lib` imports resolve:
 ```bash
 uv run python -m helper_lib.train_cnn   # A2: trains AssignmentCNN on CIFAR10
 uv run python -m helper_lib.train_gan   # A3: trains the GAN on MNIST
+uv run python -m helper_lib.train_ebm         # A4: trains the Energy Model on CIFAR10
+uv run python -m helper_lib.train_diffusion   # A4: trains the Diffusion Model on CIFAR10
 ```
 
 ```
@@ -28,17 +30,23 @@ sps_genai/
 │   ├── bigram_model.py       bigram text generation (earlier class activity)
 │   └── embedding_model.py    word embeddings (earlier class activity)
 ├── helper_lib/               model code + training scripts (shared by the API)
-│   ├── data_loader.py        CIFAR10 loader (A2), MNIST loader (A3)
-│   ├── model.py              AssignmentCNN (A2), Generator / Discriminator (A3)
-│   ├── trainer.py            train_model (A2), train_gan (A3)
+│   ├── data_loader.py        CIFAR10 loader (A2, A4 with normalize=True), MNIST loader (A3)
+│   ├── model.py              AssignmentCNN (A2), Generator / Discriminator (A3),
+│   │                         EnergyModel, UNet, DiffusionModel (A4)
+│   ├── trainer.py            train_model (A2), train_gan (A3), train_ebm / train_diffusion (A4)
 │   ├── evaluator.py          evaluate_model (A2)
-│   ├── generator.py          generate_gan_images (A3)
-│   ├── utils.py              save_model / load_model (A2, A3)
+│   ├── generator.py          generate_gan_images (A3), langevin_sample,
+│   │                         generate_ebm_images, generate_diffusion_images (A4)
+│   ├── utils.py              save_model / load_model (A2, A3, A4)
 │   ├── train_cnn.py          A2 training script
-│   └── train_gan.py          A3 training script
+│   ├── train_gan.py          A3 training script
+│   ├── train_ebm.py          A4 Energy Model training script
+│   └── train_diffusion.py    A4 Diffusion Model training script
 ├── models/
 │   ├── cnn_cifar10.pth       trained AssignmentCNN (A2)
-│   └── gan_mnist_generator.pth  trained GAN generator (A3)
+│   ├── gan_mnist_generator.pth  trained GAN generator (A3)
+│   ├── ebm_cifar10.pth       trained EnergyModel (A4)
+│   └── diffusion_cifar10.pth trained DiffusionModel, incl. EMA network (A4)
 ├── Dockerfile
 └── docker-compose.yml
 ```
@@ -53,8 +61,21 @@ sps_genai/
 
 Retrain: `uv run python -m helper_lib.train_gan` (saves `models/gan_mnist_generator.pth`).
 
+## Assignment 4 — Energy Model and Diffusion Model on CIFAR10
+
+| Part | Where |
+|---|---|
+| Energy Model | `EnergyModel` in `helper_lib/model.py`, `train_ebm` in `helper_lib/trainer.py` (contrastive divergence + replay buffer) |
+| Langevin sampling | `langevin_sample` in `helper_lib/generator.py` — gradient descent on the **input image**, not the weights |
+| Diffusion Model | `UNet`, `DiffusionModel`, `offset_cosine_diffusion_schedule` in `helper_lib/model.py`, `train_diffusion` in `helper_lib/trainer.py` |
+| Deployment | `GET /generate_ebm`, `GET /generate_diffusion` in `app/main.py` |
+
+Shape check: `uv run python -m helper_lib.model`
+
 ## Endpoints
 
+- `GET /generate_ebm?num_samples=16&steps=256&seed=1` — CIFAR10-like images from the Energy Model (PNG, A4)
+- `GET /generate_diffusion?num_samples=16&diffusion_steps=20&seed=1` — CIFAR10-like images from the Diffusion Model (PNG, A4)
 - `GET /generate_digits?num_samples=16&seed=1` — MNIST digits from the GAN generator (PNG, A3)
 - `POST /classify` — CIFAR10 image classification, upload an image (A2)
 - `POST /generate` — bigram text generation
