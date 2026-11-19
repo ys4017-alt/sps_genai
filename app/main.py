@@ -10,7 +10,6 @@ from PIL import Image
 from torchvision import transforms
 
 from helper_lib.generator import generate_diffusion_images, generate_ebm_images, generate_gan_images
-from helper_lib.generator import generate_gan_images
 from helper_lib.model import get_model
 from helper_lib.utils import load_model
 import io

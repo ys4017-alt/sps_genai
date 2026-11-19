@@ -225,7 +225,7 @@ class DiffusionModel(nn.Module):
         self.ema_network = copy.deepcopy(network).requires_grad_(False)
         self.schedule_fn = schedule_fn
         self.ema_decay = ema_decay
-        # CIFAR-10 per-channel statsweights
+        # CIFAR-10 per-channel stats
         self.register_buffer("normalizer_mean", torch.tensor([0.4914, 0.4822, 0.4465]).view(1, 3, 1, 1))
         self.register_buffer("normalizer_std", torch.tensor([0.2470, 0.2435, 0.2616]).view(1, 3, 1, 1))
 
@@ -295,14 +295,14 @@ if __name__ == "__main__":
     print("Generator:", tuple(z.shape), "->", tuple(fake.shape))
     print("Discriminator:", tuple(fake.shape), "->", tuple(prob.shape))
 
-x = torch.rand(8, 3, 32, 32) * 2 - 1
-energy = EnergyModel()(x)
-assert energy.shape == (8, 1), energy.shape
-print("EnergyModel:", tuple(x.shape), "->", tuple(energy.shape))
+    x = torch.rand(8, 3, 32, 32) * 2 - 1
+    energy = EnergyModel()(x)
+    assert energy.shape == (8, 1), energy.shape
+    print("EnergyModel:", tuple(x.shape), "->", tuple(energy.shape))
 
-diffusion = get_model("Diffusion")
-pred_noise = diffusion.network(x, torch.rand(8, 1, 1, 1))
-assert pred_noise.shape == x.shape, pred_noise.shape
-samples = diffusion.generate(torch.randn(8, 3, 32, 32), diffusion_steps=5)
-assert samples.shape == (8, 3, 32, 32) and samples.min() >= 0 and samples.max() <= 1
-print("UNet:", tuple(x.shape), "->", tuple(pred_noise.shape), "| generate ->", tuple(samples.shape))
+    diffusion = get_model("Diffusion")
+    pred_noise = diffusion.network(x, torch.rand(8, 1, 1, 1))
+    assert pred_noise.shape == x.shape, pred_noise.shape
+    samples = diffusion.generate(torch.randn(8, 3, 32, 32), diffusion_steps=5)
+    assert samples.shape == (8, 3, 32, 32) and samples.min() >= 0 and samples.max() <= 1
+    print("UNet:", tuple(x.shape), "->", tuple(pred_noise.shape), "| generate ->", tuple(samples.shape))
